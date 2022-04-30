@@ -57,10 +57,11 @@ T distance(KDNode<N,T> A, KDNode<N,T> B) {
 template <size_t N, typename T> 
 class KDTree {
     KDNode<N,T> *root;
+    int successor(KDNode<N,T>*ptr, T keys[N], int disc);
 public:
     KDTree<N,T>() {root = 0;}
     void insertar(T keys[N]);
-    bool buscar(T keys[N], KDNode<N,T>* &ptr);
+    bool buscar(T keys[N], KDNode<N,T>* &ptr, int &disc);
     void eliminar(T keys[N]);
 };
 
@@ -70,7 +71,7 @@ public:
 // 0: ptr tiene las mismas llaves que keys
 // disc indica la dimension de comparacion
 template <size_t N, typename T>
-int successor(KDNode<N,T>*ptr, T keys[N], int disc) {
+int KDTree<N,T>::successor(KDNode<N,T>*ptr, T keys[N], int disc) {
     if (keys[disc] > (*ptr)[disc])
         return 1;
     if (keys[disc] < (*ptr)[disc])
@@ -87,17 +88,9 @@ int successor(KDNode<N,T>*ptr, T keys[N], int disc) {
 }
 
 template <size_t N, typename T>
-bool hasKeys(KDNode<N,T>*p, T keys[N]) {
-    for (int i = 0 ; i < N; i++)
-        if ((*p)[i] != keys[i])
-            return false;
-    return true;
-}
-
-template <size_t N, typename T>
 void KDTree<N,T>::insertar(T keys[N])
 {
-    KDNode<N,T> *nodo = new KDNode<N,T>(keys);
+    KDNode<N,T> *nodo = new KDNode<N,T>(keys,0);
     if (root == 0)
     {
         root = nodo;
@@ -136,7 +129,7 @@ void KDTree<N,T>::insertar(T keys[N])
 }
 
 template <size_t N, typename T>
-bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr)
+bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr, int &disc)
 {
     if (root == 0)
     {
@@ -146,7 +139,7 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr)
     {
         // puntero que bajara por el arbol
         KDNode<N,T> *q = root;
-        int disc = 0;
+        disc = 0;
         while (true){
             int son = successor(q,keys,disc);
             if (son){
@@ -171,14 +164,43 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr)
 template <size_t N, typename T>
 void KDTree<N,T>::eliminar(T keys[N]) {
     KDNode<N,T> *ptr;
+    int disc;
     if (!buscar(keys, ptr))
         return;
 
+    // caso: hoja
     if (ptr->hison == 0 && ptr->loson == 0){
-        // *ptr = 0;
+        if (ptr->father->hison == ptr)
+            ptr->father->hison = 0;
+        else
+            ptr->father->loson = 0;
         delete ptr;
     }
 
+    // caso: rama
+    KDNode<N,T> *q;
+    bool qson = true;   // hison: true, loson: false
+    if (ptr->hison){
+        q = minimum(ptr->hison, disc);
+        if (q->father->loson == q)
+            qson = false;
+    }
+    else {
+        q = maximum(ptr->loson, disc);
+        if (q->father->loson == q)
+            qson = false;
+    }
+
+    if (qson)
+        q->father->hison = 0;
+    else
+        q->father->loson = 0;
+    
+    q->hison = ptr->hison;
+    q->loson = ptr->loson;
+    q->father = ptr->father;
+    
+    delete ptr;
 }
 
 int main() {
