@@ -163,6 +163,8 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr, int &disc)
     }
 }
 
+// Funcion para encontrar el nodo con el minimo keys[disc]
+// dentro de ptr en caso de borrar y remplazar x el hison
 template <size_t N, typename T>
 KDNode<N,T>* minimum(KDNode<N,T>* ptr, int disc, int j) {
     if (ptr->hison == 0 && ptr->loson == 0)
@@ -186,6 +188,8 @@ KDNode<N,T>* minimum(KDNode<N,T>* ptr, int disc, int j) {
     return hs;
 }
 
+// Funcion para encontrar el nodo con el maximo keys[disc]
+// dentro de ptr en caso de borrar y remplazar x el loson
 template <size_t N, typename T>
 KDNode<N,T>* maximum(KDNode<N,T>* ptr, int disc, int j) {
     if (ptr->hison == 0 && ptr->loson == 0)
@@ -255,6 +259,10 @@ void KDTree<N,T>::eliminar(T keys[N]) {
     
     delete ptr;
 }
+
+// =======================================
+// ================ MAIN =================
+// =======================================
 
 int main() {
     int M[][2] = {{30,40},{5,25},{70,70},{10,12},{50,30},{35,45}};

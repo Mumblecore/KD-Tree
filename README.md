@@ -6,5 +6,6 @@ Trabajo en proceso.
 
 Funciones Implementadas:
 
-- Inserción
-- Búsqueda
+- Insertar
+- Buscar
+- Eliminar
