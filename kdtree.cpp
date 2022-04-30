@@ -7,8 +7,9 @@ template <size_t N, typename T>
 class KDNode {
     T keys[N];
 public:
-    KDNode(T p[N]);
+    KDNode(T p[N], KDNode<N,T> *dad = 0);
 
+    KDNode<N,T> *father;
     KDNode<N,T> *loson, *hison;
 
     T& operator[](int);
@@ -17,12 +18,13 @@ public:
 };
 
 template <size_t N, typename T> 
-KDNode<N,T>::KDNode(T p[N]) {
+KDNode<N,T>::KDNode(T p[N], KDNode<N,T> *dad) {
     for (int i = 0; i < N; i++) {
         keys[i] = p[i];
     }
     loson = 0;
     hison = 0;
+    father = dad;
 }
 
 template <size_t N, typename T> 
@@ -76,9 +78,9 @@ int successor(KDNode<N,T>*ptr, T keys[N], int disc) {
 
     // de ser la misma llave, se comparan el resto una a una
     for (int i = 1 ; i < N; i++){
-        if (keys[(disc + i)%N] > (*p)[(disc + i)%N])
+        if (keys[(disc + i)%N] > (*ptr)[(disc + i)%N])
             return 1;
-        if (keys[(disc + i)%N] < (*p)[(disc + i)%N])
+        if (keys[(disc + i)%N] < (*ptr)[(disc + i)%N])
             return 2;
     }
     return 0;
@@ -113,6 +115,7 @@ void KDTree<N,T>::insertar(T keys[N])
                         q = q->hison;
                     else {
                         q->hison = nodo;
+                        nodo->father = q;
                         break;
                     }
                 else
@@ -120,6 +123,7 @@ void KDTree<N,T>::insertar(T keys[N])
                         q = q->loson;
                     else {
                         q->loson = nodo;
+                        nodo->father = q;
                         break;
                     }
             }
