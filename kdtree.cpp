@@ -154,18 +154,66 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr, int &disc)
                     else 
                         return false;
             }
-            else
+            else{
+                ptr = q;
                 return true;
+            }
             disc = (disc + 1) % N;
         }
     }
 }
 
 template <size_t N, typename T>
+KDNode<N,T>* minimum(KDNode<N,T>* ptr, int disc, int j) {
+    if (ptr->hison == 0 && ptr->loson == 0)
+        return ptr;
+    if (disc == j){
+        if (ptr->loson)
+            return minimum(ptr->loson, disc, (j+1)%N);
+        return ptr;
+    }
+    if (ptr->hison == 0)
+        return minimum(ptr->loson, disc, (j+1)%N);
+    if (ptr->loson == 0)
+        return minimum(ptr->hison, disc, (j+1)%N);
+    // si tiene ambos hijos:
+    // escoger el que tenga mejor resultado
+    KDNode<N,T>* ls = minimum(ptr->loson, disc, (j+1)%N);
+    KDNode<N,T>* hs = minimum(ptr->hison, disc, (j+1)%N);
+
+    if ((*ls)[disc] < (*hs)[disc])
+        return ls;
+    return hs;
+}
+
+template <size_t N, typename T>
+KDNode<N,T>* maximum(KDNode<N,T>* ptr, int disc, int j) {
+    if (ptr->hison == 0 && ptr->loson == 0)
+        return ptr;
+    if (disc == j){
+        if (ptr->hison)
+            return maximum(ptr->hison, disc, (j+1)%N);
+        return ptr;
+    }
+    if (ptr->hison == 0)
+        return maximum(ptr->loson, disc, (j+1)%N);
+    if (ptr->loson == 0)
+        return maximum(ptr->hison, disc, (j+1)%N);
+    // si tiene ambos hijos:
+    // escoger el que tenga mejor resultado
+    KDNode<N,T>* ls = maximum(ptr->loson, disc, (j+1)%N);
+    KDNode<N,T>* hs = maximum(ptr->hison, disc, (j+1)%N);
+
+    if ((*ls)[disc] > (*hs)[disc])
+        return ls;
+    return hs;
+}
+
+template <size_t N, typename T>
 void KDTree<N,T>::eliminar(T keys[N]) {
     KDNode<N,T> *ptr;
     int disc;
-    if (!buscar(keys, ptr))
+    if (!buscar(keys, ptr, disc))
         return;
 
     // caso: hoja
@@ -174,6 +222,8 @@ void KDTree<N,T>::eliminar(T keys[N]) {
             ptr->father->hison = 0;
         else
             ptr->father->loson = 0;
+        if (root == ptr)
+            root = 0;
         delete ptr;
     }
 
@@ -181,12 +231,12 @@ void KDTree<N,T>::eliminar(T keys[N]) {
     KDNode<N,T> *q;
     bool qson = true;   // hison: true, loson: false
     if (ptr->hison){
-        q = minimum(ptr->hison, disc);
+        q = minimum(ptr->hison, disc, (disc+1)%N);
         if (q->father->loson == q)
             qson = false;
     }
     else {
-        q = maximum(ptr->loson, disc);
+        q = maximum(ptr->loson, disc, (disc+1)%N);
         if (q->father->loson == q)
             qson = false;
     }
@@ -199,15 +249,23 @@ void KDTree<N,T>::eliminar(T keys[N]) {
     q->hison = ptr->hison;
     q->loson = ptr->loson;
     q->father = ptr->father;
+
+    if (root == ptr)
+        root = q;
     
     delete ptr;
 }
 
 int main() {
-    int M[3][2] = {{2,5},{5,1},{9,6}};
+    int M[][2] = {{30,40},{5,25},{70,70},{10,12},{50,30},{35,45}};
     KDTree<2,int> Tree;
     Tree.insertar(M[0]);
     Tree.insertar(M[1]);
     Tree.insertar(M[2]);
+    Tree.insertar(M[3]);
+    Tree.insertar(M[4]);
+    Tree.insertar(M[5]);
+    Tree.eliminar(M[0]);
+    Tree.eliminar(M[5]);
     return 0;
 }
