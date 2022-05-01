@@ -370,10 +370,18 @@ int main() {
     Tree.insertar(M[4]);
     Tree.insertar(M[5]);
 
-    int point[2] = {9,4};
     int query[2];
-    Tree.NearestNeighbor(point, query);
+    int P[][2] = {{6,5},{9,4},{3,2},{9,9}};
+    Tree.NearestNeighbor(P[0], query);
+    cout << query[0] << ", " << query[1] << endl;
 
+    Tree.NearestNeighbor(P[1], query);
+    cout << query[0] << ", " << query[1] << endl;
+
+    Tree.NearestNeighbor(P[2], query);
+    cout << query[0] << ", " << query[1] << endl;
+
+    Tree.NearestNeighbor(P[3], query);
     cout << query[0] << ", " << query[1] << endl;
     
     return 0;

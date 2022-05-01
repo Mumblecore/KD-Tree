@@ -9,3 +9,4 @@ Funciones Implementadas:
 - Insertar
 - Buscar
 - Eliminar
+- Nearest Neighbor
