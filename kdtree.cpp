@@ -12,6 +12,8 @@ public:
     KDNode<N,T> *father;
     KDNode<N,T> *loson, *hison;
 
+    T* getKeys(){return keys;}
+
     T& operator[](int);
     bool operator==(const KDNode &Node);
     friend T distance(KDNode A, KDNode B);
@@ -57,13 +59,33 @@ T distance(KDNode<N,T> A, KDNode<N,T> B) {
 template <size_t N, typename T> 
 class KDTree {
     KDNode<N,T> *root;
+
     int successor(KDNode<N,T>*ptr, T keys[N], int disc);
+    KDNode<N,T>* minimum(KDNode<N,T>* ptr, int disc, int j);
+    KDNode<N,T>* maximum(KDNode<N,T>* ptr, int disc, int j);
 public:
     KDTree<N,T>() {root = 0;}
+    ~KDTree<N,T>();
+
     void insertar(T keys[N]);
     bool buscar(T keys[N], KDNode<N,T>* &ptr, int &disc);
     void eliminar(T keys[N]);
+
+    T*  NN(T keys[N]);
+    T** kNN(T keys[N], int k);
+    T** rangeQuery(T keys[N], int k);
 };
+
+template <size_t N, typename T> 
+KDTree<N,T>::~KDTree<N,T>() {
+    while (root){
+        eliminar(root->getKeys());
+    }
+}
+
+// ======================================
+// ======== FUNCIONES AUXILIARES ========
+// ======================================
 
 // Indica si las keys deben ir a la derecha o izq de ptr
 // 1: hison
@@ -86,6 +108,60 @@ int KDTree<N,T>::successor(KDNode<N,T>*ptr, T keys[N], int disc) {
     }
     return 0;
 }
+
+// Funcion para encontrar el nodo con el minimo keys[disc]
+// dentro de ptr en caso de borrar y remplazar x el hison
+template <size_t N, typename T>
+KDNode<N,T>* KDTree<N,T>::minimum(KDNode<N,T>* ptr, int disc, int j) {
+    if (ptr->hison == 0 && ptr->loson == 0)
+        return ptr;
+    if (disc == j){
+        if (ptr->loson)
+            return minimum(ptr->loson, disc, (j+1)%N);
+        return ptr;
+    }
+    if (ptr->hison == 0)
+        return minimum(ptr->loson, disc, (j+1)%N);
+    if (ptr->loson == 0)
+        return minimum(ptr->hison, disc, (j+1)%N);
+    // si tiene ambos hijos:
+    // escoger el que tenga mejor resultado
+    KDNode<N,T>* ls = minimum(ptr->loson, disc, (j+1)%N);
+    KDNode<N,T>* hs = minimum(ptr->hison, disc, (j+1)%N);
+
+    if ((*ls)[disc] < (*hs)[disc])
+        return ls;
+    return hs;
+}
+
+// Funcion para encontrar el nodo con el maximo keys[disc]
+// dentro de ptr en caso de borrar y remplazar x el loson
+template <size_t N, typename T>
+KDNode<N,T>* KDTree<N,T>::maximum(KDNode<N,T>* ptr, int disc, int j) {
+    if (ptr->hison == 0 && ptr->loson == 0)
+        return ptr;
+    if (disc == j){
+        if (ptr->hison)
+            return maximum(ptr->hison, disc, (j+1)%N);
+        return ptr;
+    }
+    if (ptr->hison == 0)
+        return maximum(ptr->loson, disc, (j+1)%N);
+    if (ptr->loson == 0)
+        return maximum(ptr->hison, disc, (j+1)%N);
+    // si tiene ambos hijos:
+    // escoger el que tenga mejor resultado
+    KDNode<N,T>* ls = maximum(ptr->loson, disc, (j+1)%N);
+    KDNode<N,T>* hs = maximum(ptr->hison, disc, (j+1)%N);
+
+    if ((*ls)[disc] > (*hs)[disc])
+        return ls;
+    return hs;
+}
+
+// =======================================
+// ======== FUNCIONES ESCENCIALES ========
+// =======================================
 
 template <size_t N, typename T>
 void KDTree<N,T>::insertar(T keys[N])
@@ -133,6 +209,7 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr, int &disc)
 {
     if (root == 0)
     {
+        disc = -1;
         return false;
     }
     else
@@ -161,56 +238,6 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr, int &disc)
             disc = (disc + 1) % N;
         }
     }
-}
-
-// Funcion para encontrar el nodo con el minimo keys[disc]
-// dentro de ptr en caso de borrar y remplazar x el hison
-template <size_t N, typename T>
-KDNode<N,T>* minimum(KDNode<N,T>* ptr, int disc, int j) {
-    if (ptr->hison == 0 && ptr->loson == 0)
-        return ptr;
-    if (disc == j){
-        if (ptr->loson)
-            return minimum(ptr->loson, disc, (j+1)%N);
-        return ptr;
-    }
-    if (ptr->hison == 0)
-        return minimum(ptr->loson, disc, (j+1)%N);
-    if (ptr->loson == 0)
-        return minimum(ptr->hison, disc, (j+1)%N);
-    // si tiene ambos hijos:
-    // escoger el que tenga mejor resultado
-    KDNode<N,T>* ls = minimum(ptr->loson, disc, (j+1)%N);
-    KDNode<N,T>* hs = minimum(ptr->hison, disc, (j+1)%N);
-
-    if ((*ls)[disc] < (*hs)[disc])
-        return ls;
-    return hs;
-}
-
-// Funcion para encontrar el nodo con el maximo keys[disc]
-// dentro de ptr en caso de borrar y remplazar x el loson
-template <size_t N, typename T>
-KDNode<N,T>* maximum(KDNode<N,T>* ptr, int disc, int j) {
-    if (ptr->hison == 0 && ptr->loson == 0)
-        return ptr;
-    if (disc == j){
-        if (ptr->hison)
-            return maximum(ptr->hison, disc, (j+1)%N);
-        return ptr;
-    }
-    if (ptr->hison == 0)
-        return maximum(ptr->loson, disc, (j+1)%N);
-    if (ptr->loson == 0)
-        return maximum(ptr->hison, disc, (j+1)%N);
-    // si tiene ambos hijos:
-    // escoger el que tenga mejor resultado
-    KDNode<N,T>* ls = maximum(ptr->loson, disc, (j+1)%N);
-    KDNode<N,T>* hs = maximum(ptr->hison, disc, (j+1)%N);
-
-    if ((*ls)[disc] > (*hs)[disc])
-        return ls;
-    return hs;
 }
 
 template <size_t N, typename T>
@@ -261,6 +288,62 @@ void KDTree<N,T>::eliminar(T keys[N]) {
 }
 
 // =======================================
+// ====== BUSQUEDA MULTIDIMENSIONAL ======
+// =======================================
+
+    // KDNode<N,T> *result = NearestNeighbor(root, keys, 0);
+
+
+// template <size_t N, typename T>
+// KDNode<N,T> *NearestNeighbor(KDNode<N,T>* p, T k[N], int d, float bd, KDNode<N,T> *bc) {
+//     if (ptr->hison && (*ptr)[disc] > keys[disc]){
+//         ptr = ptr->hison;
+//     }
+// }
+
+template <size_t N, typename T>
+T*  KDTree<N,T>::NN(T keys[N]) {
+    // Creamos un nodo con las keys solicitadas
+    KDNode<N,T> target(keys);
+    KDNode<N,T> *query = &target;
+
+    // inicializamos nuestras variables
+    KDNode<N,T> *ptr = root;
+    int disc = 0;
+    double best_dist = INFINITY;
+    KDNode<N,T> *best_choise = 0;
+
+    buscar(keys, ptr, disc);
+    cout << ptr->keys[0] << ", " << ptr->keys[1] << endl;
+    
+    // bajamos
+    // if (distance<N,T>(ptr,query) < best_dist){
+    //     if (ptr->hison == 0 && ptr->loson == 0){
+    //         // subimos
+    //     }
+    //     else if (ptr-> hison) {
+
+    //     }
+    // }
+
+    // if (ptr->hison && (*ptr)[disc] > keys[disc]){
+    //     ptr = ptr->hison;
+    // }
+
+    return ptr->getKeys();
+}
+
+template <size_t N, typename T>
+T** KDTree<N,T>::kNN(T keys[N], int k) {
+    return 0;
+}
+
+template <size_t N, typename T>
+T** KDTree<N,T>::rangeQuery(T keys[N], int k) {
+    return 0;
+}
+
+// =======================================
 // ================ MAIN =================
 // =======================================
 
@@ -273,7 +356,9 @@ int main() {
     Tree.insertar(M[3]);
     Tree.insertar(M[4]);
     Tree.insertar(M[5]);
-    Tree.eliminar(M[0]);
-    Tree.eliminar(M[5]);
+
+    int q[] = {20,37};
+    Tree.NN(q);
+    
     return 0;
 }
