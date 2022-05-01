@@ -16,7 +16,7 @@ public:
 
     T& operator[](int);
     bool operator==(const KDNode &Node);
-    friend T distance(KDNode A, KDNode B);
+    friend float distance(KDNode A, KDNode B);
 };
 
 template <size_t N, typename T> 
@@ -44,10 +44,10 @@ bool KDNode<N,T>::operator== (const KDNode &Node) {
 }
 
 template <size_t N, typename T> 
-T distance(KDNode<N,T> A, KDNode<N,T> B) {
+float distance(KDNode<N,T> A, KDNode<N,T> B) {
     T dis = 0;
     for (int i = 0; i < N; i++) {
-        dis += (A.keys[i] - B.keys[i]) * (A.keys[i] - B.keys[i]);
+        dis += (A[i] - B[i]) * (A[i] - B[i]);
     }
     return sqrt((double)dis);
 }
@@ -71,7 +71,7 @@ public:
     bool buscar(T keys[N], KDNode<N,T>* &ptr, int &disc);
     void eliminar(T keys[N]);
 
-    T*  NN(T keys[N]);
+    void NearestNeighbor(T keys[N], T result[N]);
     T** kNN(T keys[N], int k);
     T** rangeQuery(T keys[N], int k);
 };
@@ -215,26 +215,23 @@ bool KDTree<N,T>::buscar(T keys[N], KDNode<N,T>* &ptr, int &disc)
     else
     {
         // puntero que bajara por el arbol
-        KDNode<N,T> *q = root;
+        ptr = root;
         disc = 0;
         while (true){
-            int son = successor(q,keys,disc);
-            if (son){
+            int son = successor(ptr,keys,disc);
+            if (son)
                 if (son == 1)
-                    if (q->hison)
-                        q = q->hison;
+                    if (ptr->hison)
+                        ptr = ptr->hison;
                     else
                         return false;
                 else
-                    if (q->loson)
-                        q = q->loson;
+                    if (ptr->loson)
+                        ptr = ptr->loson;
                     else 
                         return false;
-            }
-            else{
-                ptr = q;
+            else
                 return true;
-            }
             disc = (disc + 1) % N;
         }
     }
@@ -249,13 +246,17 @@ void KDTree<N,T>::eliminar(T keys[N]) {
 
     // caso: hoja
     if (ptr->hison == 0 && ptr->loson == 0){
+        if (root == ptr){
+            root = 0;
+            delete ptr;
+            return;
+        }
         if (ptr->father->hison == ptr)
             ptr->father->hison = 0;
         else
             ptr->father->loson = 0;
-        if (root == ptr)
-            root = 0;
         delete ptr;
+        return;
     }
 
     // caso: rama
@@ -280,7 +281,10 @@ void KDTree<N,T>::eliminar(T keys[N]) {
     q->hison = ptr->hison;
     q->loson = ptr->loson;
     q->father = ptr->father;
-
+    if (q->loson)
+        q->loson->father = q;
+    if (q->hison)
+        q->hison->father = q;
     if (root == ptr)
         root = q;
     
@@ -291,46 +295,55 @@ void KDTree<N,T>::eliminar(T keys[N]) {
 // ====== BUSQUEDA MULTIDIMENSIONAL ======
 // =======================================
 
-    // KDNode<N,T> *result = NearestNeighbor(root, keys, 0);
+template <size_t N, typename T>
+KDNode<N,T> *NN(KDNode<N,T>* ptr, KDNode<N,T>* target, int d, float &bd) {
+    if (!ptr)
+        return 0;
 
+    float r = distance<N,T>(*ptr,*target);
+    if (r < bd)
+        bd = r;
 
-// template <size_t N, typename T>
-// KDNode<N,T> *NearestNeighbor(KDNode<N,T>* p, T k[N], int d, float bd, KDNode<N,T> *bc) {
-//     if (ptr->hison && (*ptr)[disc] > keys[disc]){
-//         ptr = ptr->hison;
-//     }
-// }
+    // bajar por la rama mas cercana al target
+    KDNode<N,T> *q;
+    bool rama = 0;  // 0:loson, 1:hison
+    if ((*ptr)[d] < (*target)[d]){
+        rama = 1;
+        q = NN(ptr->hison,target,(d+1)%N,bd);
+    } else {
+        q = NN(ptr->loson,target,(d+1)%N,bd);
+    }
+
+    KDNode<N,T> *best = ptr;
+    if (q && r > distance<N,T>(*q,*target))
+        best = q;
+
+    // analizar las ramas no visitadas
+    float r_ = fabs((*ptr)[d] - (*target)[d]);
+    r = distance<N,T>(*best,*target);
+    if (r_ < r){
+        if (rama == 0){
+            q = NN(ptr->hison,target,(d+1)%N,bd);
+        } else {
+            q = NN(ptr->loson,target,(d+1)%N,bd);
+        }
+    }
+
+    if (q && r > distance<N,T>(*q,*target))
+        best = q;
+
+    return best;
+}
 
 template <size_t N, typename T>
-T*  KDTree<N,T>::NN(T keys[N]) {
-    // Creamos un nodo con las keys solicitadas
-    KDNode<N,T> target(keys);
-    KDNode<N,T> *query = &target;
+void KDTree<N,T>::NearestNeighbor(T keys[N], T result[N]) {
+    KDNode<N,T> NodeKey(keys);
+    KDNode<N,T> *target = &NodeKey;
+    float best_distance = INFINITY;
+    KDNode<N,T> *nn = NN(root,target,0,best_distance);
 
-    // inicializamos nuestras variables
-    KDNode<N,T> *ptr = root;
-    int disc = 0;
-    double best_dist = INFINITY;
-    KDNode<N,T> *best_choise = 0;
-
-    buscar(keys, ptr, disc);
-    cout << ptr->keys[0] << ", " << ptr->keys[1] << endl;
-    
-    // bajamos
-    // if (distance<N,T>(ptr,query) < best_dist){
-    //     if (ptr->hison == 0 && ptr->loson == 0){
-    //         // subimos
-    //     }
-    //     else if (ptr-> hison) {
-
-    //     }
-    // }
-
-    // if (ptr->hison && (*ptr)[disc] > keys[disc]){
-    //     ptr = ptr->hison;
-    // }
-
-    return ptr->getKeys();
+    for (int i = 0; i < N; i++)
+        result[i] = (*nn)[i];
 }
 
 template <size_t N, typename T>
@@ -348,7 +361,7 @@ T** KDTree<N,T>::rangeQuery(T keys[N], int k) {
 // =======================================
 
 int main() {
-    int M[][2] = {{30,40},{5,25},{70,70},{10,12},{50,30},{35,45}};
+    int M[][2] = {{5,4},{2,6},{13,3},{3,1},{10,2},{8,7}};
     KDTree<2,int> Tree;
     Tree.insertar(M[0]);
     Tree.insertar(M[1]);
@@ -357,8 +370,11 @@ int main() {
     Tree.insertar(M[4]);
     Tree.insertar(M[5]);
 
-    int q[] = {20,37};
-    Tree.NN(q);
+    int point[2] = {9,4};
+    int query[2];
+    Tree.NearestNeighbor(point, query);
+
+    cout << query[0] << ", " << query[1] << endl;
     
     return 0;
 }
